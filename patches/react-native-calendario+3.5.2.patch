@@ -1,0 +1,92 @@
+diff --git a/node_modules/react-native-calendario/lib/typescript/src/types/index.d.ts b/node_modules/react-native-calendario/lib/typescript/src/types/index.d.ts
+index c363445..e1b5f08 100644
+--- a/node_modules/react-native-calendario/lib/typescript/src/types/index.d.ts
++++ b/node_modules/react-native-calendario/lib/typescript/src/types/index.d.ts
+@@ -10,6 +10,8 @@ export interface ThemeType extends MonthThemeType {
+     emptyMonthContainerStyle?: ViewStyle;
+     emptyMonthTextStyle?: TextStyle;
+     monthTitleTextStyle?: TextStyle;
++    yearTitleTextStyle?: TextStyle;
++    currentMonthTitleTextStyle?: TextStyle;
+ }
+ export declare type DayType = {
+     date: Date;
+diff --git a/node_modules/react-native-calendario/src/components/Calendar.tsx b/node_modules/react-native-calendario/src/components/Calendar.tsx
+index bed27f5..b9e34e7 100644
+--- a/node_modules/react-native-calendario/src/components/Calendar.tsx
++++ b/node_modules/react-native-calendario/src/components/Calendar.tsx
+@@ -302,6 +302,7 @@ const Calendario = forwardRef<FlatList, CalendarProps>((props, ref) => {
+       renderItem={renderMonth}
+       data={months}
+       ref={listReference}
++      testID={'calendar-flat-list'}
+     />
+   );
+ });
+diff --git a/node_modules/react-native-calendario/src/components/Month/index.tsx b/node_modules/react-native-calendario/src/components/Month/index.tsx
+index 8be6db8..3cc49a7 100644
+--- a/node_modules/react-native-calendario/src/components/Month/index.tsx
++++ b/node_modules/react-native-calendario/src/components/Month/index.tsx
+@@ -1,4 +1,4 @@
+-import React, { useCallback, useMemo } from 'react';
++import React, { Fragment, useCallback, useMemo } from 'react';
+ import { View, Text, LayoutChangeEvent } from 'react-native';
+ import { getMonthNames, Month, MonthProps } from 'react-native-month';
+ import moment from 'moment';
+@@ -42,16 +42,19 @@ const EmptyMonth = React.memo<EmptyMonthProps>(
+ interface MonthTitleProps {
+   name: string;
+   theme: ThemeType;
++  currentMonth: boolean;
++  year: number;
+ }
+ 
+ const MonthTitle = React.memo<MonthTitleProps>(
+   (props: MonthTitleProps) => (
+-    <Text
+-      allowFontScaling={false}
+-      style={[styles.monthTitleText, props.theme.monthTitleTextStyle]}
+-    >
+-      {props.name}
+-    </Text>
++      <Text
++        allowFontScaling={false}
++        style={[styles.monthTitleText, props.theme.monthTitleTextStyle, props.currentMonth ? props.theme.currentMonthTitleTextStyle : {}]}
++      >
++        {props.name}
++        <Text allowFontScaling={false} style={[styles.monthTitleText, props.theme.yearTitleTextStyle]}> {props.year}</Text>
++      </Text>
+   ),
+   () => SHOULD_NOT_UPDATE
+ );
+@@ -94,7 +97,7 @@ export default React.memo<Props>(
+       Array.isArray(monthNames) && monthNames.length === 12
+         ? monthNames
+         : getMonthNames(locale);
+-    const monthName = `${MONTH_NAMES[month]} ${year}`;
++    const monthName = `${MONTH_NAMES[month]}`;
+ 
+     const isEmptyMonth =
+       !renderAllMonths &&
+@@ -131,7 +134,7 @@ export default React.memo<Props>(
+ 
+     return (
+       <View style={monthStyle} onLayout={handleOnLayout}>
+-        {showMonthTitle && <MonthTitle name={monthName} theme={theme} />}
++        {showMonthTitle && <MonthTitle name={monthName} year={year} theme={theme} currentMonth={moment().get('month') === month && moment().get('year') === year} />}
+         <View>
+           <Month
+             month={month}
+diff --git a/node_modules/react-native-calendario/src/types/index.tsx b/node_modules/react-native-calendario/src/types/index.tsx
+index 883ec9d..5cca756 100644
+--- a/node_modules/react-native-calendario/src/types/index.tsx
++++ b/node_modules/react-native-calendario/src/types/index.tsx
+@@ -19,6 +19,8 @@ export interface ThemeType extends MonthThemeType {
+   emptyMonthContainerStyle?: ViewStyle;
+   emptyMonthTextStyle?: TextStyle;
+   monthTitleTextStyle?: TextStyle;
++  yearTitleTextStyle?: TextStyle;
++  currentMonthTitleTextStyle?: TextStyle;
+ }
+ 
+ export type DayType = {

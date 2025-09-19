@@ -1,0 +1,3 @@
+- cd ios && pod install
+- yarn test:ios:build
+- yarn test:ios:run

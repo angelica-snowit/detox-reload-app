@@ -1,0 +1,28 @@
+{
+  "extends": "@react-native/typescript-config/tsconfig.json",
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "baseUrl": "./",
+    "paths": {
+      "@components/*": ["src/Components/*"],
+      "@navigation/*": ["src/Navigation/*"],
+      "@services/*": ["src/Services/*"],
+      "@routes": ["src/Navigation/ROUTES"],
+      "@screens/*": ["src/Screens/*"],
+      "@store/*": ["src/Store/*"],
+      "@theme/*": ["src/Theme/*"],
+      "@translations/*": ["src/Translations/*"],
+      "@utils/*": ["src/Utils/*"],
+      "@hooks/*": ["src/Hooks/*"],
+      "@config/*": ["config/*"],
+      "@models": ["models"],
+      "@graphQL/*": ["src/GraphQL/*"],
+      "@providers/*": ["src/Providers/*"]
+    },
+  },
+  "exclude": [
+    "node_modules",
+    "node_modules/*",
+  ],
+  "typeRoots": ["./node_modules/@types"]
+}

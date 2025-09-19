@@ -1,0 +1,126 @@
+diff --git a/node_modules/react-native-calendars/src/calendar/day/marking/index.d.ts b/node_modules/react-native-calendars/src/calendar/day/marking/index.d.ts
+index f6f9df5..4fe23a6 100644
+--- a/node_modules/react-native-calendars/src/calendar/day/marking/index.d.ts
++++ b/node_modules/react-native-calendars/src/calendar/day/marking/index.d.ts
+@@ -2,6 +2,7 @@ import React from 'react';
+ import { ViewStyle, TextStyle, StyleProp } from 'react-native';
+ import { Theme, MarkingTypes } from '../../../types';
+ import { DotProps } from '../dot';
++import { ReactElement } from 'react';
+ export declare enum Markings {
+     DOT = "dot",
+     MULTI_DOT = "multi-dot",
+@@ -39,6 +40,7 @@ export interface MarkingProps extends DotProps {
+     customTextStyle?: StyleProp<TextStyle>;
+     customContainerStyle?: StyleProp<ViewStyle>;
+     dotColor?: string;
++    CustomDot?: ReactElement;
+     dots?: DOT[];
+     periods?: PERIOD[];
+     startingDay?: boolean;
+diff --git a/node_modules/react-native-calendars/src/calendar/day/marking/index.js b/node_modules/react-native-calendars/src/calendar/day/marking/index.js
+index 338c1e5..927d435 100644
+--- a/node_modules/react-native-calendars/src/calendar/day/marking/index.js
++++ b/node_modules/react-native-calendars/src/calendar/day/marking/index.js
+@@ -13,7 +13,7 @@ export var Markings;
+     Markings["CUSTOM"] = "custom";
+ })(Markings || (Markings = {}));
+ const Marking = (props) => {
+-    const { theme, type, dots, periods, selected, dotColor } = props;
++    const { theme, type, dots, periods, selected, dotColor, CustomDot } = props;
+     const style = useRef(styleConstructor(theme));
+     const getItems = (items) => {
+         if (items && Array.isArray(items) && items.length > 0) {
+@@ -65,7 +65,7 @@ const Marking = (props) => {
+             }
+             color = selected && item.selectedDotColor ? item.selectedDotColor : item.color;
+         }
+-        return <Dot {...dotProps} key={key} color={color}/>;
++        return CustomDot ?? <Dot {...dotProps} key={key} color={color}/>;
+     };
+     return renderMarkingByType();
+ };
+diff --git a/node_modules/react-native-calendars/src/calendar/day/period/index.js b/node_modules/react-native-calendars/src/calendar/day/period/index.js
+index 30695ca..ca6a5b8 100644
+--- a/node_modules/react-native-calendars/src/calendar/day/period/index.js
++++ b/node_modules/react-native-calendars/src/calendar/day/period/index.js
+@@ -42,9 +42,11 @@ const PeriodDay = (props) => {
+             }
+             if (marking.startingDay) {
+                 defaultStyle.startingDay = { backgroundColor: marking.color };
++                defaultStyle.startingDayFiller = { backgroundColor: marking.fillerColor ?? marking.color };
+             }
+             if (marking.endingDay) {
+                 defaultStyle.endingDay = { backgroundColor: marking.color };
++                defaultStyle.endingDayFiller = { backgroundColor: marking.fillerColor ?? marking.color };
+             }
+             if (!marking.startingDay && !marking.endingDay) {
+                 defaultStyle.day = { backgroundColor: marking.color };
+@@ -111,14 +113,12 @@ const PeriodDay = (props) => {
+         const start = markingStyle.startingDay;
+         const end = markingStyle.endingDay;
+         if (start && !end) {
+-            rightFillerStyle.backgroundColor = markingStyle.startingDay?.backgroundColor;
++            rightFillerStyle.backgroundColor = markingStyle.startingDayFiller?.backgroundColor;
+         }
+         else if (end && !start) {
+-            leftFillerStyle.backgroundColor = markingStyle.endingDay?.backgroundColor;
++            leftFillerStyle.backgroundColor = markingStyle.endingDayFiller?.backgroundColor;
+         }
+         else if (markingStyle.day) {
+-            leftFillerStyle.backgroundColor = markingStyle.day?.backgroundColor;
+-            rightFillerStyle.backgroundColor = markingStyle.day?.backgroundColor;
+             fillerStyle = { backgroundColor: markingStyle.day?.backgroundColor };
+         }
+         return { leftFillerStyle, rightFillerStyle, fillerStyle };
+@@ -139,8 +139,8 @@ const PeriodDay = (props) => {
+     };
+     const renderMarking = () => {
+         if (marking) {
+-            const { marked, dotColor } = marking;
+-            return (<Marking type={'dot'} theme={theme} marked={marked} disabled={isDisabled} inactive={isInactive} today={isToday} dotColor={dotColor}/>);
++            const { marked, dotColor, CustomDot } = marking;
++            return (<Marking type={'dot'} theme={theme} marked={marked} disabled={isDisabled} inactive={isInactive} today={isToday} dotColor={dotColor} CustomDot={CustomDot} />);
+         }
+     };
+     const renderText = () => {
+diff --git a/node_modules/react-native-calendars/src/calendar/index.d.ts b/node_modules/react-native-calendars/src/calendar/index.d.ts
+index 21c4200..2fc3655 100644
+--- a/node_modules/react-native-calendars/src/calendar/index.d.ts
++++ b/node_modules/react-native-calendars/src/calendar/index.d.ts
+@@ -46,6 +46,7 @@ export interface CalendarProps extends CalendarHeaderProps, DayProps {
+     disabledByWeekDays?: number[];
+     /** Test ID */
+     testID?: string;
++    showWeek?: number;
+ }
+ /**
+  * @description: Calendar component
+diff --git a/node_modules/react-native-calendars/src/calendar/index.js b/node_modules/react-native-calendars/src/calendar/index.js
+index da4b7a2..97fa85d 100644
+--- a/node_modules/react-native-calendars/src/calendar/index.js
++++ b/node_modules/react-native-calendars/src/calendar/index.js
+@@ -21,7 +21,7 @@ import BasicDay from './day/basic';
+  * @gif: https://github.com/wix/react-native-calendars/blob/master/demo/assets/calendar.gif
+  */
+ const Calendar = (props) => {
+-    const { initialDate, current, theme, markedDates, minDate, maxDate, allowSelectionOutOfRange, onDayPress, onDayLongPress, onMonthChange, onVisibleMonthsChange, disableMonthChange, enableSwipeMonths, hideExtraDays, firstDay, showSixWeeks, displayLoadingIndicator, customHeader, headerStyle, accessibilityElementsHidden, importantForAccessibility, testID, style: propsStyle } = props;
++    const { initialDate, current, theme, markedDates, minDate, maxDate, allowSelectionOutOfRange, onDayPress, onDayLongPress, onMonthChange, onVisibleMonthsChange, disableMonthChange, enableSwipeMonths, hideExtraDays, firstDay, showSixWeeks, displayLoadingIndicator, customHeader, headerStyle, accessibilityElementsHidden, importantForAccessibility, testID, style: propsStyle, showWeek } = props;
+     const [currentMonth, setCurrentMonth] = useState(current || initialDate ? parseDate(current || initialDate) : new XDate());
+     const style = useRef(styleConstructor(theme));
+     const header = useRef();
+@@ -124,8 +124,12 @@ const Calendar = (props) => {
+         const shouldShowSixWeeks = showSixWeeks && !hideExtraDays;
+         const days = page(currentMonth, firstDay, shouldShowSixWeeks);
+         const weeks = [];
+-        while (days.length) {
+-            weeks.push(renderWeek(days.splice(0, 7), weeks.length));
++        if (!showWeek) {
++            while (days.length) {
++                weeks.push(renderWeek(days.splice(0, 7), weeks.length));
++            }
++        } else {
++            weeks.push(renderWeek(days.splice(days.findIndex(d => d.getWeek() === showWeek), 7)));
+         }
+         return <View style={style.current.monthView}>{weeks}</View>;
+     };

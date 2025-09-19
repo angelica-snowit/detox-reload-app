@@ -1,0 +1,198 @@
+diff --git a/node_modules/react-native-autocomplete-dropdown/lib/typescript/src/types/index.d.ts b/node_modules/react-native-autocomplete-dropdown/lib/typescript/src/types/index.d.ts
+index 343d7fa..812c3b5 100644
+--- a/node_modules/react-native-autocomplete-dropdown/lib/typescript/src/types/index.d.ts
++++ b/node_modules/react-native-autocomplete-dropdown/lib/typescript/src/types/index.d.ts
+@@ -3,6 +3,8 @@ import type { StyleProp, TextInputProps, TextStyle, ViewStyle, FlatListProps, Te
+ export type AutocompleteDropdownItem = {
+     id: string;
+     title?: string | null;
++    subTitle?: string | null
++    value?: any | null
+ };
+ export interface IAutocompleteDropdownRef {
+     clear: () => void;
+@@ -71,5 +73,7 @@ export interface IAutocompleteDropdownProps {
+     emptyResultText?: string;
+     flatListProps?: Partial<FlatListProps<AutocompleteDropdownItem>>;
+     ref?: React.Ref<TextInput>;
++    testID?: string;
++    suggestionsListHintStyle?: StyleProp<TextStyle>;
+ }
+ //# sourceMappingURL=index.d.ts.map
+\ No newline at end of file
+diff --git a/node_modules/react-native-autocomplete-dropdown/src/AutocompleteDropdownContext.tsx b/node_modules/react-native-autocomplete-dropdown/src/AutocompleteDropdownContext.tsx
+index 3981284..7ce642e 100644
+--- a/node_modules/react-native-autocomplete-dropdown/src/AutocompleteDropdownContext.tsx
++++ b/node_modules/react-native-autocomplete-dropdown/src/AutocompleteDropdownContext.tsx
+@@ -152,7 +152,9 @@ export const AutocompleteDropdownContextProvider: FC<IAutocompleteDropdownContex
+             ...styles.wrapper,
+             opacity,
+             ...contentStyles,
+-          }}>
++          }}
++          testID={opacity === 1 ? 'visible' : 'hide'}
++          accessible={true}>
+           {content}
+         </View>
+       )}
+diff --git a/node_modules/react-native-autocomplete-dropdown/src/Dropdown.tsx b/node_modules/react-native-autocomplete-dropdown/src/Dropdown.tsx
+index 3479c28..8bb3ad8 100644
+--- a/node_modules/react-native-autocomplete-dropdown/src/Dropdown.tsx
++++ b/node_modules/react-native-autocomplete-dropdown/src/Dropdown.tsx
+@@ -18,6 +18,7 @@ export const Dropdown = memo((props: DropdownProps) => {
+     ListEmptyComponent,
+     ItemSeparatorComponent,
+     direction,
++    testID,
+     ...rest
+   } = props
+   const themeName = useColorScheme()
+@@ -48,6 +49,7 @@ export const Dropdown = memo((props: DropdownProps) => {
+         keyExtractor={item => item.id}
+         ListEmptyComponent={ListEmptyComponent}
+         ItemSeparatorComponent={ItemSeparatorComponent ?? defaultItemSeparator}
++        testID={`${testID}-dropdown`}
+         {...rest.flatListProps}
+       />
+     </Animatable.View>
+diff --git a/node_modules/react-native-autocomplete-dropdown/src/ScrollViewListItem.tsx b/node_modules/react-native-autocomplete-dropdown/src/ScrollViewListItem.tsx
+index fc4d93c..18c77cb 100644
+--- a/node_modules/react-native-autocomplete-dropdown/src/ScrollViewListItem.tsx
++++ b/node_modules/react-native-autocomplete-dropdown/src/ScrollViewListItem.tsx
+@@ -12,10 +12,13 @@ interface ScrollViewListItemProps {
+   onPress?: () => void
+   ignoreAccents?: boolean
+   numberOfLines?: number
++  id: string
++  subTitle?: string
++  hintStyle?: ViewProps['style']
+ }
+ 
+ export const ScrollViewListItem: FC<ScrollViewListItemProps> = memo(
+-  ({ highlight, title, style, onPress, ignoreAccents, numberOfLines = 2 }) => {
++  ({ highlight, title, style, onPress, ignoreAccents, numberOfLines = 2, hintStyle, id, subTitle }) => {
+     const themeName = useColorScheme()
+     const styles = useMemo(() => getStyles(themeName || 'light'), [themeName])
+ 
+@@ -41,18 +44,21 @@ export const ScrollViewListItem: FC<ScrollViewListItemProps> = memo(
+ 
+     return (
+       <TouchableOpacity onPress={onPress}>
+-        <View style={styles.container}>
+-          <Text numberOfLines={numberOfLines}>
+-            <Text numberOfLines={1} style={{ ...styles.text, ...(style as object) }}>
+-              {titleParts.titleStart}
++        <View style={styles.container} testID={`autocomplete-${id}`}>
++          <View style={styles.titleContainer}>
++            <Text numberOfLines={numberOfLines}>
++              <Text numberOfLines={1} style={{ ...styles.text, ...(style as object) }}>
++                {titleParts.titleStart}
++              </Text>
++              <Text numberOfLines={1} style={{ ...styles.text, ...(style as object), ...styles.textBold }}>
++                {titleParts.titleHighlighted}
++              </Text>
++              <Text numberOfLines={1} style={{ ...styles.text, ...(style as object) }}>
++                {titleParts.titleEnd}
++              </Text>
+             </Text>
+-            <Text numberOfLines={1} style={{ ...styles.text, ...(style as object), ...styles.textBold }}>
+-              {titleParts.titleHighlighted}
+-            </Text>
+-            <Text numberOfLines={1} style={{ ...styles.text, ...(style as object) }}>
+-              {titleParts.titleEnd}
+-            </Text>
+-          </Text>
++          </View>
++          {!!subTitle && subTitle !== '' ? <Text style={{ ...styles.subTitle, ...(hintStyle as object) }}>{subTitle}</Text> : undefined}
+         </View>
+       </TouchableOpacity>
+     )
+@@ -63,12 +69,13 @@ const getStyles = (themeName: 'light' | 'dark' = 'light') =>
+   StyleSheet.create({
+     container: {
+       padding: 15,
++    },
++    titleContainer: {
+       flex: 1,
+       flexDirection: 'row',
+       alignItems: 'flex-start',
+       justifyContent: 'flex-start',
+       flexWrap: 'nowrap',
+-
+       width: '100%',
+     },
+     text: {
+@@ -77,6 +84,9 @@ const getStyles = (themeName: 'light' | 'dark' = 'light') =>
+       flexGrow: 1,
+       flexShrink: 0,
+     },
++    subTitle: {
++      opacity: 0.5
++    },
+     textBold: {
+       fontWeight: 'bold',
+     },
+diff --git a/node_modules/react-native-autocomplete-dropdown/src/index.tsx b/node_modules/react-native-autocomplete-dropdown/src/index.tsx
+index 9b43cea..4ca9798 100644
+--- a/node_modules/react-native-autocomplete-dropdown/src/index.tsx
++++ b/node_modules/react-native-autocomplete-dropdown/src/index.tsx
+@@ -74,6 +74,8 @@ export const AutocompleteDropdown = memo((props: IAutocompleteDropdownProps) =>
+     inputContainerStyle,
+     suggestionsListTextStyle,
+     ref,
++    testID,
++    suggestionsListHintStyle,
+   } = props
+   const InputComponent = (props.InputComponent as typeof TextInput) || TextInput
+   const inputRef = useRef<TextInput>(null)
+@@ -334,10 +336,13 @@ export const AutocompleteDropdown = memo((props: IAutocompleteDropdownProps) =>
+           style={suggestionsListTextStyle}
+           onPress={() => _onSelectItem(item)}
+           ignoreAccents={ignoreAccents}
++          id={item.id}
++          subTitle={item.subTitle}
++          hintStyle={suggestionsListHintStyle}
+         />
+       )
+     },
+-    [_onSelectItem, customRenderItem, ignoreAccents, searchText, suggestionsListTextStyle],
++    [_onSelectItem, customRenderItem, ignoreAccents, searchText, suggestionsListTextStyle, suggestionsListHintStyle],
+   )
+ 
+   const ListEmptyComponent = useMemo(() => {
+@@ -459,6 +464,7 @@ export const AutocompleteDropdown = memo((props: IAutocompleteDropdownProps) =>
+           renderItem={renderItem}
+           ItemSeparatorComponent={props.ItemSeparatorComponent}
+           ListEmptyComponent={ListEmptyComponent}
++          testID={testID}
+         />,
+       )
+     } else {
+@@ -507,6 +513,7 @@ export const AutocompleteDropdown = memo((props: IAutocompleteDropdownProps) =>
+             placeholderTextColor={theme[themeName].inputPlaceholderColor}
+             {...textInputProps}
+             style={[styles.input, { height: inputHeight }, (textInputProps ?? {}).style]}
++            testID={testID}
+           />
+         </Pressable>
+         <RightButton
+diff --git a/node_modules/react-native-autocomplete-dropdown/src/types/index.ts b/node_modules/react-native-autocomplete-dropdown/src/types/index.ts
+index cad5359..b98e9a5 100644
+--- a/node_modules/react-native-autocomplete-dropdown/src/types/index.ts
++++ b/node_modules/react-native-autocomplete-dropdown/src/types/index.ts
+@@ -4,6 +4,8 @@ import type { StyleProp, TextInputProps, TextStyle, ViewStyle, FlatListProps, Te
+ export type AutocompleteDropdownItem = {
+   id: string
+   title?: string | null
++  subTitle?: string | null
++  value?: any | null
+ }
+ 
+ export interface IAutocompleteDropdownRef {
+@@ -74,4 +76,6 @@ export interface IAutocompleteDropdownProps {
+   emptyResultText?: string
+   flatListProps?: Partial<FlatListProps<AutocompleteDropdownItem>>
+   ref?: React.Ref<TextInput>
++  testID?: string;
++  suggestionsListHintStyle?: StyleProp<TextStyle>;
+ }
